@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, UploadCloud, Moon, Sun, Trash2, Table2, TrendingUp, MoreHorizontal, X, Settings } from 'lucide-react';
+import { LayoutDashboard, UploadCloud, Moon, Sun, Trash2, Table2, TrendingUp } from 'lucide-react';
 import UploadsTab from '@/components/attendance/UploadsTab';
 import DashboardTab from '@/components/attendance/DashboardTab';
 import PredictiveCalendarTab from '@/components/attendance/PredictiveCalendarTab';
@@ -19,7 +19,6 @@ const NAV_ITEMS = [
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('uploads');
   const [showClearMenu, setShowClearMenu] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const store = useAttendanceStore();
   
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -174,86 +173,13 @@ export default function DashboardPage() {
           );
         })}
         <button
-          onClick={() => setShowMobileMenu(true)}
+          onClick={() => setIsDarkMode(!isDarkMode)}
           className="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500"
         >
-          <Settings size={20} />
-          <span className="text-[0.6rem] font-bold uppercase tracking-wider">More</span>
+          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          <span className="text-[0.6rem] font-bold uppercase tracking-wider">{isDarkMode ? 'Light' : 'Dark'}</span>
         </button>
       </nav>
-
-      {/* ── MOBILE MORE MENU OVERLAY ── */}
-      {showMobileMenu && (
-        <div className="fixed inset-0 z-[100] md:hidden">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300"
-            onClick={() => setShowMobileMenu(false)}
-          />
-          
-          {/* Menu Card */}
-          <div className="absolute bottom-4 left-4 right-4 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 animate-in slide-in-from-bottom-8 duration-300">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Settings</h2>
-              <button 
-                onClick={() => setShowMobileMenu(false)}
-                className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-4">
-              {/* Theme Toggle */}
-              <button
-                onClick={() => setIsDarkMode(!isDarkMode)}
-                className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  {isDarkMode ? <Sun size={20} className="text-amber-500" /> : <Moon size={20} className="text-indigo-500" />}
-                  <span className="font-semibold text-slate-700 dark:text-slate-200">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
-                </div>
-                <div className={`w-12 h-6 rounded-full p-1 transition-colors ${isDarkMode ? 'bg-indigo-600' : 'bg-slate-300'}`}>
-                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`} />
-                </div>
-              </button>
-
-              {/* Clear Data Section */}
-              <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-4">
-                <p className="text-[0.6rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">Selective Clear</p>
-                <div className="grid grid-cols-1 gap-2">
-                  <button 
-                    onClick={() => { handleClearData('attendance'); setShowMobileMenu(false); }}
-                    className="flex items-center gap-3 w-full p-3 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
-                  >
-                    <Trash2 size={16} className="text-slate-400" />
-                    Attendance Data
-                  </button>
-                  <button 
-                    onClick={() => { handleClearData('timetable'); setShowMobileMenu(false); }}
-                    className="flex items-center gap-3 w-full p-3 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
-                  >
-                    <Table2 size={16} className="text-slate-400" />
-                    Timetable Blueprint
-                  </button>
-                  <button 
-                    onClick={() => { handleClearData('all'); setShowMobileMenu(false); }}
-                    className="flex items-center gap-3 w-full p-3 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all border border-transparent hover:border-red-100 dark:hover:border-red-900/30"
-                  >
-                    <Trash2 size={16} />
-                    Clear Everything
-                  </button>
-                </div>
-              </div>
-
-              {/* Logout */}
-              <div className="mt-2">
-                <LogoutButton store={store} showLabel={true} />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── MAIN CONTENT (pl-20 on desktop, pb-20 on mobile) ── */}
       <main className="flex-1 overflow-y-auto min-w-0 md:pl-20 pb-20 md:pb-0">
