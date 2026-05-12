@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { LayoutDashboard, UploadCloud, Moon, Sun, Trash2, Table2, TrendingUp } from 'lucide-react';
 import UploadsTab from '@/components/attendance/UploadsTab';
 import DashboardTab from '@/components/attendance/DashboardTab';
@@ -73,8 +74,23 @@ export default function DashboardPage() {
         
         {/* Brand mark */}
         <div className="px-4 mb-8 flex items-center gap-4 overflow-hidden">
-          <div className="w-10 h-10 rounded-xl bg-slate-900 dark:bg-slate-100 flex items-center justify-center shrink-0 shadow-sm">
-            <span className="text-white dark:text-slate-900 font-black text-[0.7rem] leading-tight text-center">AA</span>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm overflow-hidden p-1.5 ${
+            activeTab === 'dashboard' 
+              ? 'bg-white dark:bg-slate-800' 
+              : 'bg-slate-900 dark:bg-slate-100'
+          }`}>
+            {activeTab === 'dashboard' ? (
+              <Image 
+                src="/assets/logo.svg" 
+                alt="KL University Attendance Architect Logo" 
+                width={40} 
+                height={40} 
+                className="object-contain"
+                priority
+              />
+            ) : (
+              <span className="text-white dark:text-slate-900 font-black text-[0.7rem] leading-tight text-center">AA</span>
+            )}
           </div>
           <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 overflow-hidden whitespace-nowrap">
             <p className="text-sm font-bold tracking-tight text-slate-900 dark:text-slate-100 leading-none">Attendance</p>
