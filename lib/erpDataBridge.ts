@@ -62,7 +62,10 @@ export function timetableResultToBlueprint(timetableData: any) {
 
             periods[p.period - 1] = {
               courseCode: p.courseCode,
-              type: finalCompType
+              type: finalCompType,
+              // Optional metadata — ignored by attendance engine, used by timetable UI
+              ...(p.section && p.section !== 'UNKNOWN' && { section: p.section }),
+              ...(p.room && { roomNumber: p.room }),
             };
           }
         });

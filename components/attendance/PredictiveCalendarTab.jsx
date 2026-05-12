@@ -193,6 +193,8 @@ export default function PredictiveCalendarTab({ store }) {
   const [countToday, setCountToday] = useState(true);
   const [showInfo, setShowInfo] = useState(false);
   const [blockedWarning, setBlockedWarning] = useState(null); // { msg, dayKey }
+  const [expandedCards, setExpandedCards] = useState({});
+  const toggleCard = (idx) => setExpandedCards(prev => ({ ...prev, [idx]: !prev[idx] }));
 
   // ── Guards ────────────────────────────────────────────────────────────────
   if (!baseline || baseline.length === 0) {
@@ -231,8 +233,7 @@ export default function PredictiveCalendarTab({ store }) {
   }, 0);
   const workingDays = days.filter(d => !isSunday(d) && !holidays.some(h => isSameDay(new Date(h), d))).length;
 
-  const [expandedCards, setExpandedCards] = useState({});
-  const toggleCard = (idx) => setExpandedCards(prev => ({ ...prev, [idx]: !prev[idx] }));
+  // expandedCards state and toggleCard are declared above (before guards) to satisfy React hooks rules
 
   const COMP_LABELS = { L: 'Lecture', P: 'Practical', S: 'Skilling' };
 

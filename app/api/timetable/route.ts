@@ -101,21 +101,31 @@ export async function POST(req: NextRequest) {
           const td = $res(tdEl);
           const raw = td.text().trim();
           if (raw && raw !== '-') {
-            const parts = raw.split(' - ');
+            // Regex-based parser for ERP timetable cells
+            // Handles formats like: "25MT1306E-L    - S-2    -RoomNo-H-402"
+            //                    or: "25FL1301E-P    - S-2    -RoomNo-HC-14A"
+            const cellRegex = /^([A-Z0-9]+)-([LPS])\s*(?:-\s*(S-\d+))?\s*(?:-\s*RoomNo-(.+))?$/i;
+            const match = raw.replace(/\s+/g, ' ').trim().match(cellRegex);
+
             let courseCode = "UNKNOWN";
             let type = "UNKNOWN";
             let section = "UNKNOWN";
             let room = null;
-            if (parts.length >= 1) {
-              const subParts = parts[0].split('-');
-              courseCode = (subParts[0] || "UNKNOWN").trim().toUpperCase();
-              type = subParts[1] || "UNKNOWN";
+
+            if (match) {
+              courseCode = (match[1] || "UNKNOWN").trim().toUpperCase();
+              type = (match[2] || "UNKNOWN").trim().toUpperCase();
+              section = match[3] ? match[3].trim() : "UNKNOWN";
+              room = match[4] ? match[4].trim() : null;
+            } else {
+              // Fallback: attempt basic split for non-standard formats
+              const parts = raw.split(/\s*-\s*/);
+              if (parts.length >= 2) {
+                courseCode = (parts[0] || "UNKNOWN").trim().toUpperCase();
+                type = (parts[1] || "UNKNOWN").trim().toUpperCase();
+              }
             }
-            if (parts.length >= 2) section = parts[1].trim();
-            if (parts.length >= 3) {
-              const subParts = parts[2].split('-');
-              room = subParts[0] || null;
-            }
+
             const periodInfo = { period: j, raw, courseCode, type, section, room };
             periods.push(periodInfo);
             if (courseCode !== "UNKNOWN") {

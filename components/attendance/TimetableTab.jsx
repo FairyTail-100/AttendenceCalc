@@ -84,6 +84,17 @@ export default function TimetableTab({ store }) {
                             <span className="text-[0.55rem] font-bold uppercase tracking-widest opacity-80 border px-1 rounded-sm border-current bg-white/50 dark:bg-black/20">
                               {cls.type === 'L' ? 'Lec' : cls.type === 'P' ? 'Prac' : 'Skill'}
                             </span>
+                            {/* Optional metadata: section and room */}
+                            {cls.section && (
+                              <span className="text-[0.5rem] font-semibold text-slate-500 dark:text-slate-400 mt-0.5 opacity-70">
+                                {cls.section}
+                              </span>
+                            )}
+                            {cls.roomNumber && (
+                              <span className="text-[0.5rem] font-medium text-slate-400 dark:text-slate-500 opacity-60">
+                                {cls.roomNumber}
+                              </span>
+                            )}
                             {/* Tooltip for full name */}
                             <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-xs rounded px-2 py-1 -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap pointer-events-none z-10 shadow-lg border border-slate-700">
                               {getCourseName(cls.courseCode)}
