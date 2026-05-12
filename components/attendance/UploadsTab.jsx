@@ -53,6 +53,10 @@ export default function UploadsTab({ store, onSwitchTab }) {
     <div className="max-w-3xl mx-auto">
       <div className="mb-10 pb-6 border-b border-gray-200 dark:border-gray-800">
         <h1 className="text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">Data Ingestion</h1>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
+          <span className="flex h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
+          Note: You need to login to the ERP to update to the latest attendance.
+        </p>
       </div>
       
       {/* Global feedback */}
