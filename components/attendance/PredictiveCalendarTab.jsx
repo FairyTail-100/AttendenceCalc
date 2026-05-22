@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { format, addDays, eachDayOfInterval, isSameDay, isSunday } from 'date-fns';
 import { projectAttendanceDetailed, calculateSubjectStatus, calculateDayImpact } from '@/lib/attendanceEngine';
-import { Search, Shield, Lock, ChevronDown, CalendarCheck2, Info, X } from 'lucide-react';
+import { Search, Shield, Lock, ChevronDown, CalendarCheck2, Info, X, RotateCw, CalendarX, CalendarOff, CalendarCheck, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ─── Tiny Impact Dot ──────────────────────────────────────────────────────────
@@ -192,9 +192,9 @@ export default function PredictiveCalendarTab({ store }) {
   const [noSkipsFound, setNoSkipsFound] = useState(false);
   const [countToday, setCountToday] = useState(true);
   const [showInfo, setShowInfo] = useState(false);
-  const [blockedWarning, setBlockedWarning] = useState(null); // { msg, dayKey }
   const [expandedCards, setExpandedCards] = useState({});
   const toggleCard = (idx) => setExpandedCards(prev => ({ ...prev, [idx]: !prev[idx] }));
+  const [editMode, setEditMode] = useState('cycle'); // 'cycle', 'absent', 'holiday', 'normal'
 
   // ── Guards ────────────────────────────────────────────────────────────────
   if (!baseline || baseline.length === 0) {
@@ -233,38 +233,59 @@ export default function PredictiveCalendarTab({ store }) {
   }, 0);
   const workingDays = days.filter(d => !isSunday(d) && !holidays.some(h => isSameDay(new Date(h), d))).length;
 
+  const detainedSubjects = useMemo(() => {
+    return detailedProjections.filter(p => p.percentage < 75).map(p => p.courseCode);
+  }, [detailedProjections]);
+  const hasDetained = detainedSubjects.length > 0;
+
   // expandedCards state and toggleCard are declared above (before guards) to satisfy React hooks rules
 
   const COMP_LABELS = { L: 'Lecture', P: 'Practical', S: 'Skilling' };
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleDateClick = (day) => {
+
+  const applyModeAction = (day, mode = editMode) => {
     if (isSunday(day)) return;
 
     const isAbs = absenceDates.some(d => isSameDay(new Date(d), day));
     const isHol = holidays.some(h => isSameDay(new Date(h), day));
+    const dayStr = day.toISOString();
 
-    if (!isAbs && !isHol) {
-      // Safety check: simulate adding this absence and validate all subjects
-      const testAbsences = [...absenceDates, day.toISOString()];
-      const testProjections = projectAttendanceDetailed(baseline, blueprint, end, testAbsences, holidays, countToday);
-      const failingSubject = testProjections.find(proj => proj.percentage < 75);
+    let newAbsences = [...absenceDates];
+    let newHolidays = [...holidays];
 
-      if (failingSubject) {
-        // Block the selection and show a brief inline warning
-        const dayKey = format(day, 'yyyy-MM-dd');
-        setBlockedWarning({ msg: `${failingSubject.courseCode} would drop below 75% (${failingSubject.percentage}%)`, dayKey });
-        setTimeout(() => setBlockedWarning(null), 2800);
-        return;
+    if (mode === 'cycle') {
+      if (!isAbs && !isHol) {
+        newAbsences = [...newAbsences.filter(d => !isSameDay(new Date(d), day)), dayStr];
+      } else if (isAbs) {
+        newAbsences = newAbsences.filter(d => !isSameDay(new Date(d), day));
+        newHolidays = [...newHolidays.filter(h => !isSameDay(new Date(h), day)), dayStr];
+      } else {
+        newHolidays = newHolidays.filter(h => !isSameDay(new Date(h), day));
       }
-
-      setAbsenceDates([...absenceDates, day.toISOString()]);
-    } else if (isAbs) {
-      setAbsenceDates(absenceDates.filter(d => !isSameDay(new Date(d), day)));
-      setHolidays([...holidays, day.toISOString()]);
-    } else {
-      setHolidays(holidays.filter(h => !isSameDay(new Date(h), day)));
+    } else if (mode === 'absent') {
+      if (!isAbs) {
+        newHolidays = newHolidays.filter(h => !isSameDay(new Date(h), day));
+        newAbsences = [...newAbsences.filter(d => !isSameDay(new Date(d), day)), dayStr];
+      }
+    } else if (mode === 'holiday') {
+      if (!isHol) {
+        newAbsences = newAbsences.filter(d => !isSameDay(new Date(d), day));
+        newHolidays = [...newHolidays.filter(h => !isSameDay(new Date(h), day)), dayStr];
+      }
+    } else if (mode === 'normal') {
+      if (isAbs || isHol) {
+        newAbsences = newAbsences.filter(d => !isSameDay(new Date(d), day));
+        newHolidays = newHolidays.filter(h => !isSameDay(new Date(h), day));
+      }
     }
+
+    setAbsenceDates(newAbsences);
+    setHolidays(newHolidays);
+  };
+
+  const handleDateClick = (day) => {
+    applyModeAction(day, editMode);
   };
 
   const findBestSkip = () => {
@@ -550,23 +571,63 @@ export default function PredictiveCalendarTab({ store }) {
 
           {/* ── LEFT: Flex-Wrap Calendar Grid ── */}
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                Absence Sandbox — click to toggle
-              </p>
-              <div className="flex items-center gap-3 text-[0.55rem] font-semibold uppercase text-slate-400 dark:text-slate-500">
-                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />Low</span>
-                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-400" />Med</span>
-                <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" />High</span>
+            <div className="flex flex-col gap-4 mb-4">
+              <div className="flex items-center justify-between">
+                <p className="text-[0.65rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                  Absence Sandbox — click to toggle
+                </p>
+                <div className="flex items-center gap-3 text-[0.55rem] font-semibold uppercase text-slate-400 dark:text-slate-500 hidden sm:flex">
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />Low</span>
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-400" />Med</span>
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" />High</span>
+                </div>
+              </div>
+
+              {/* Editing Toolbar */}
+              <div className="flex flex-wrap items-center gap-2 p-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
+                {[
+                  { id: 'cycle', label: 'Cycle', icon: RotateCw, color: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 border-blue-200 dark:border-blue-500/30' },
+                  { id: 'absent', label: 'Absent', icon: CalendarX, color: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 border-red-200 dark:border-red-500/30' },
+                  { id: 'holiday', label: 'Holiday', icon: CalendarOff, color: 'text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border-slate-300 dark:border-slate-600' },
+                  { id: 'normal', label: 'Normal', icon: CalendarCheck, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 border-emerald-200 dark:border-emerald-500/30' }
+                ].map((mode) => {
+                  const isActive = editMode === mode.id;
+                  const Icon = mode.icon;
+                  return (
+                    <button
+                      key={mode.id}
+                      onClick={() => setEditMode(mode.id)}
+                      className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                        isActive 
+                          ? `${mode.color} border ring-2 ring-slate-200 dark:ring-slate-700 shadow-sm opacity-100`
+                          : 'text-slate-500 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 border border-transparent opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <Icon size={14} strokeWidth={isActive ? 3 : 2} />
+                      <span className="hidden sm:inline">{mode.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Blocked warning toast */}
-            {blockedWarning && (
-              <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-xs font-semibold text-red-700 dark:text-red-400 animate-pulse">
-                <span>⚠</span> Blocked — {blockedWarning.msg} (detention floor)
-              </div>
-            )}
+            {/* Soft warning toast */}
+            <AnimatePresence>
+              {hasDetained && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                  className="mb-4 flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 shadow-sm"
+                >
+                  <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5 animate-pulse" strokeWidth={2.5} />
+                  <div className="flex flex-col gap-0.5 text-xs">
+                    <span className="font-bold text-amber-900 dark:text-amber-200 uppercase tracking-wider text-[0.6rem]">Attendance Warning</span>
+                    <span className="font-medium text-amber-800 dark:text-amber-400">
+                      This configuration leaves the following subjects below 75% attendance: {detainedSubjects.join(', ')}
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div className="flex flex-wrap gap-2">
               {days.map((day, i) => {
@@ -574,25 +635,35 @@ export default function PredictiveCalendarTab({ store }) {
                 const isHol   = holidays.some(h => isSameDay(new Date(h), day)) || isSunday(day);
                 const isToday = isSameDay(day, today);
                 const impact  = isSunday(day) ? 0 : calculateDayImpact(day, baseline, blueprint);
-                const isBlocked = blockedWarning && format(day, 'yyyy-MM-dd') === blockedWarning.dayKey;
-
                 // Token colour — purely manual state, no recommendation highlighting
                 let tokenBg = 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500';
                 if (isAbs)        tokenBg = 'bg-red-500 border-red-400 text-white shadow-sm';
-                else if (isBlocked) tokenBg = 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 ring-1 ring-red-400/50';
                 else if (isHol)   tokenBg = 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500';
                 else if (isToday) tokenBg = 'bg-white dark:bg-slate-900 border-slate-900 dark:border-slate-300 text-slate-900 dark:text-slate-100 ring-1 ring-slate-900 dark:ring-slate-300';
+
+                const titleText = isHol 
+                  ? (isSunday(day) ? 'Sunday — auto holiday' : 'College Holiday') 
+                  : isAbs 
+                    ? `Planned Absent${hasDetained ? ` — leaves subject(s) detained: ${detainedSubjects.join(', ')}` : ''}` 
+                    : 'Normal';
 
                 return (
                   <div
                     key={i}
                     onClick={() => handleDateClick(day)}
-                    title={isHol ? (isSunday(day) ? 'Sunday — auto holiday' : 'College Holiday') : isAbs ? 'Planned Absent' : 'Normal'}
+                    title={titleText}
                     className={`relative flex flex-col items-center justify-between w-[70px] h-[80px] py-2.5 px-1 border rounded-xl shadow-sm select-none transition-colors duration-150 ${tokenBg} ${!isSunday(day) ? 'cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}
                   >
                     {/* Holiday lock icon */}
                     {isHol && !isSunday(day) && (
                       <Lock size={8} className="absolute top-1.5 right-1.5 text-slate-400 dark:text-slate-500 opacity-70" />
+                    )}
+
+                    {/* Detention warning icon */}
+                    {isAbs && hasDetained && (
+                      <span className="absolute top-1 right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500 border border-white/50 shadow-sm animate-pulse">
+                        <AlertTriangle size={8} className="text-white" />
+                      </span>
                     )}
 
                     <span className="text-[0.5rem] font-bold uppercase tracking-widest opacity-60">
@@ -610,12 +681,15 @@ export default function PredictiveCalendarTab({ store }) {
             {/* Legend */}
             <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
               {[
-                { color: 'bg-slate-200 dark:bg-slate-700', label: 'Normal' },
-                { color: 'bg-red-500', label: 'Absent' },
+                { color: 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800', label: 'Normal' },
+                { color: 'bg-red-500 border border-red-400', label: 'Absent' },
                 { color: 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700', label: 'Holiday' },
-              ].map(({ color, label }) => (
+                { color: 'bg-red-500 border border-red-400 flex items-center justify-center', label: 'Absence may cause detention', icon: true },
+              ].map(({ color, label, icon }) => (
                 <div key={label} className="flex items-center gap-1.5">
-                  <span className={`w-3 h-3 rounded-md ${color}`} />
+                  <span className={`w-3.5 h-3.5 rounded-md ${color} relative shrink-0`}>
+                    {icon && <AlertTriangle size={8} className="text-white absolute" />}
+                  </span>
                   <span className="text-[0.6rem] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{label}</span>
                 </div>
               ))}
